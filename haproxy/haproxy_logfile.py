@@ -156,19 +156,36 @@ class HaproxyLogFile(object):
         current_peak = 0
         queue = 0
 
+        current_span = 0
+        first_on_queue = None
+
         for line in self._valid_lines:
             queue = line.queue_backend
 
+            if queue > 0:
+                current_span += 1
+
+            if queue > 0 and first_on_queue == None:
+                first_on_queue = line.accept_date
+
             if queue == 0 and current_peak > threshold:
-                peaks.append(current_peak)
+                peaks.append({'peak': current_peak,
+                              'span': current_span,
+                              'first': first_on_queue,
+                              'last': line.accept_date,})
                 current_peak = 0
+                current_span = 0
+                first_on_queue = None
 
             if queue > current_peak:
                 current_peak = queue
 
         # case of a series that does not end
         if queue > 0 and current_peak > threshold:
-            peaks.append(current_peak)
+            peaks.append({'peak': current_peak,
+                          'span': current_span,
+                          'first': first_on_queue,
+                          'last': line.accept_date,})
 
         return peaks
 
