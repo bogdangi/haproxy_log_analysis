@@ -44,6 +44,9 @@ CHANGES
 - Add a ``--list-commands`` argument on the command line interface.
   [GF]
 
+- Add filter feature for ``HaproxyLogFile``.
+  [bogdangi]
+
 - Generate an API doc for ``HaproxyLogLine`` and ``HaproxyLogFile``.
   [bogdangi]
 

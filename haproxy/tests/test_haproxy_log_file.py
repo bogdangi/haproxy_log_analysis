@@ -508,3 +508,63 @@ class HaproxyLogFileTest(unittest.TestCase):
         new_pickle_time = os.path.getmtime(pickle_file)
 
         self.assertTrue(new_pickle_time > old_pickle_time)
+
+    def test_haproxy_log_file_filter(self):
+        """Check that the filter works as expected"""
+        log_file = HaproxyLogFile(
+            logfile='haproxy/tests/files/huge.log',
+        )
+        log_file.parse_file()
+
+        # Let's prepare simple filtering function for methods
+
+        def request_method(method):
+            def filter(haproxy_log_line):
+                return haproxy_log_line.http_request_method == method
+            return filter
+
+        http_methods = log_file.filter(
+            request_method('POST')).cmd_http_methods()
+
+        # It has one method POST
+
+        self.assertEqual(len(http_methods), 1)
+        self.assertEqual(http_methods['GET'], 0)
+        self.assertEqual(http_methods['POST'], 57)
+        self.assertEqual(http_methods['HEAD'], 0)
+
+        # Get top IPs for POST requests
+
+        top_ips = log_file.filter(request_method('GET')).cmd_top_ips()
+
+        # Get the top IPs that do POST requests
+
+        self.assertEqual(len(top_ips), 10)
+        self.assertEqual(top_ips[0], ('123.123.123.123', 4522))
+
+        # Get the top paths that do POST requests
+
+        top_paths = log_file.filter(
+            request_method('POST')).cmd_top_request_paths()
+
+        self.assertEqual(len(top_paths), 10)
+        self.assertEqual(top_paths[0],
+                         ('/VirtualHostBase/https/www.example.com:443/website'
+                          '/VirtualHostRoot/login', 24))
+
+        # Get the top paths from IP X
+        # Let's prepare simple filtering function for IPs
+
+        def from_ip(ip):
+            def filter(haproxy_log_line):
+                return haproxy_log_line.captured_request_headers[1:-1] == ip
+            return filter
+
+        top_paths = log_file.filter(
+            from_ip('123.123.123.123')).cmd_top_request_paths()
+
+        self.assertEqual(len(top_paths), 10)
+        self.assertEqual(top_paths[0],
+                         ('/VirtualHostBase/https/www.example.com:443/website'
+                          '/VirtualHostRoot/autoren/dummy/'
+                          '@@notifications_quickview', 335))
