@@ -5,6 +5,9 @@ CHANGES
 0.0.1 (unreleased)
 ------------------
 
+- Provide solution for dynamic update filters.
+  [bogdangi]
+
 - Pickle :class:`.HaproxyLogFile` data for faster performance.
   [GF]
 
@@ -15,7 +18,6 @@ CHANGES
 - Add lots of filters: ip, path, ssl, backend, frontend, server, status_code
   and so on. See ``--list-filters`` for a complete list of them.
   [GF]
-
 - Add :meth:`.HaproxyLogFile.parse_data` method to get data from data stream.
   It allows you use it as a library.
   [bogdangi]
