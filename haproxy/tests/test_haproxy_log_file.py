@@ -533,8 +533,9 @@ class HaproxyLogFileTest(unittest.TestCase):
         self.assertEqual(http_methods['POST'], 57)
         self.assertEqual(http_methods['HEAD'], 0)
 
-        # Get top IPs for POST requests
+        # Get top IPs for GET requests
 
+        log_file.removeAllFilters()
         top_ips = log_file.filter(request_method('GET')).cmd_top_ips()
 
         # Get the top IPs that do POST requests
@@ -544,6 +545,7 @@ class HaproxyLogFileTest(unittest.TestCase):
 
         # Get the top paths that do POST requests
 
+        log_file.removeAllFilters()
         top_paths = log_file.filter(
             request_method('POST')).cmd_top_request_paths()
 
@@ -555,6 +557,7 @@ class HaproxyLogFileTest(unittest.TestCase):
         # Get the top paths from IP X
         # Let's prepare simple filtering function for IPs
 
+        log_file.removeAllFilters()
         def from_ip(ip):
             def filter(haproxy_log_line):
                 return haproxy_log_line.captured_request_headers[1:-1] == ip

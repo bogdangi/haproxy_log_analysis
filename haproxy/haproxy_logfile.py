@@ -27,6 +27,40 @@ class HaproxyLogFile(object):
         self._valid_lines = []
         self._invalid_lines = []
 
+        self._applied_filters = []
+
+        # Variables to save initial log lines
+        self._init_valid_lines = []
+        self._init_invalid_lines = []
+
+    def getAppliedFilters(self):
+        """Return applied filters"""
+        return self._applied_filters
+
+    def applyFilter(self, filter):
+        """Apply filter"""
+        if filter not in self.getAppliedFilters():
+            self._applied_filters.append(filter)
+            return True
+        return False
+
+    def removeFilter(self, filter):
+        """Remove filter and update data"""
+        appliedFilters = self.getAppliedFilters()
+        if filter in appliedFilters:
+            for appliedFilter in appliedFilters:
+                if appliedFilter != filter:
+                    self.filter(appliedFilter)
+            return True
+        return False
+
+    def removeAllFilters(self):
+        """Remove all filters and update data to initial state"""
+        self.total_lines = len(self._init_valid_lines) + 1
+        self._valid_lines = self._init_valid_lines[:]
+        self._invalid_lines = self._init_invalid_lines[:]
+        self._applied_filters = []
+
     def parse_file(self):
         if self.logfile is None:
             raise ValueError('No log file is configured yet!')
@@ -87,8 +121,10 @@ class HaproxyLogFile(object):
             parsed_line = HaproxyLogLine(stripped_line)
 
             if parsed_line.valid:
+                self._init_valid_lines.append(parsed_line)
                 self._valid_lines.append(parsed_line)
             else:
+                self._init_invalid_lines.append(stripped_line)
                 self._invalid_lines.append(stripped_line)
 
     def filter(self, filter_func, reverse=False):
@@ -106,35 +142,26 @@ class HaproxyLogFile(object):
         :param reverse: negate the filter (so accept all log lines that return
           ``False``).
         :type reverse: boolean
-        :returns: a new instance of HaproxyLogFile containing only log lines
+        :returns: current instance of HaproxyLogFile containing only log lines
           that passed the filter function.
         :rtype: :class:`HaproxyLogFile`
-
-        TODO:
-            Deep copy implementation.
         """
-        new_log_file = HaproxyLogFile()
-        new_log_file.logfile = self.logfile
+        if self.applyFilter(filter_func):
+            self.total_lines = 0
+            valid_lines = self._valid_lines[:]
+            self._valid_lines = []
+            if not reverse:
+                for i in valid_lines:
+                    if filter_func(i):
+                        self.total_lines += 1
+                        self._valid_lines.append(i)
+            else:
+                for i in valid_lines:
+                    if not filter_func(i):
+                        self.total_lines += 1
+                        self._valid_lines.append(i)
 
-        new_log_file.total_lines = 0
-
-        new_log_file._valid_lines = []
-        new_log_file._invalid_lines = self._invalid_lines[:]
-
-        # add the reverse conditional outside the loop to keep the loop as
-        # straightforward as possible
-        if not reverse:
-            for i in self._valid_lines:
-                if filter_func(i):
-                    new_log_file.total_lines += 1
-                    new_log_file._valid_lines.append(i)
-        else:
-            for i in self._valid_lines:
-                if not filter_func(i):
-                    new_log_file.total_lines += 1
-                    new_log_file._valid_lines.append(i)
-
-        return new_log_file
+        return self
 
     @classmethod
     def commands(cls):
